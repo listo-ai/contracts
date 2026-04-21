@@ -9,7 +9,8 @@
 mod component;
 
 pub use component::{
-    Action, Component, DateRangePreset, DiffAnnotation, SelectOption, Tab, TableColumn, TableSource,
+    Action, BindingSpec, Component, Concurrency, DateRangePreset, DiffAnnotation, SelectOption,
+    Tab, TableColumn, TableSource,
 };
 
 use schemars::JsonSchema;
@@ -20,7 +21,9 @@ use serde::{Deserialize, Serialize};
 /// emission to the highest mutually-supported version. Adding a
 /// component variant is a minor bump; removing or re-shaping is a
 /// major bump with a 12-month deprecation window.
-pub const IR_VERSION: u32 = 1;
+///
+/// v2: added `toggle`, `slider` variants; `BindingSpec`, `Concurrency` types.
+pub const IR_VERSION: u32 = 2;
 
 /// Root of every component tree. Carries the IR version so clients can
 /// refuse to render incompatible trees.
@@ -63,12 +66,12 @@ mod tests {
             children: vec![],
         });
         let json = serde_json::to_value(&tree).unwrap();
-        assert_eq!(json["ir_version"], 1);
+        assert_eq!(json["ir_version"], 2);
         assert_eq!(json["root"]["type"], "page");
         assert_eq!(json["root"]["title"], "Hello");
 
         let back: ComponentTree = serde_json::from_value(json).unwrap();
-        assert_eq!(back.ir_version, 1);
+        assert_eq!(back.ir_version, 2);
     }
 
     #[test]

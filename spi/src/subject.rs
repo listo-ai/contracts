@@ -139,7 +139,7 @@ pub struct SubjectBuilder {
 
 impl SubjectBuilder {
     /// Append an already-escaped kind segment chain such as
-    /// `"api.v1.nodes.list"`. Each dot-separated piece becomes its own
+    /// `"api.v1.search"`. Each dot-separated piece becomes its own
     /// token; pieces are validated.
     pub fn kind(mut self, chain: &str) -> Self {
         for piece in chain.split('.') {
@@ -188,9 +188,9 @@ mod tests {
     #[test]
     fn builder_produces_canonical_form() {
         let s = Subject::for_agent(&TenantId::new("sys"), "edge-42")
-            .kind("api.v1.nodes.list")
+            .kind("api.v1.search")
             .build();
-        assert_eq!(s.as_dotted(), "fleet.sys.edge-42.api.v1.nodes.list");
+        assert_eq!(s.as_dotted(), "fleet.sys.edge-42.api.v1.search");
     }
 
     #[test]

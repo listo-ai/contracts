@@ -6,10 +6,82 @@
 //!
 //! S1 variants (~15): page, row, col, grid, tabs, text, heading,
 //! badge, button, form, table, diff, rich_text, forbidden, dangling.
+//! S1 (write-path): toggle, slider, BindingSpec, Concurrency.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+
+// -------------------------------------------------------------------
+// Binding types (write-path, S1)
+// -------------------------------------------------------------------
+
+/// Slot binding for a two-way bound control (toggle, slider, …).
+///
+/// Short form is sugar: `"$target.enabled"` is equivalent to
+/// `{ slot: "$target.enabled", concurrency: "lww" }`. The binding
+/// expression grammar is the same as read bindings (DASHBOARD.md §
+/// Bindings) — `$target.*`, `$self.*`, `$stack.*`, child-walk `/`.
+/// Must resolve to a concrete slot at resolve time.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum BindingSpec {
+    /// Sugar: just the binding expression string.
+    Short(String),
+    /// Full form — allows overriding concurrency and debounce per
+    /// control.
+    Full {
+        slot: String,
+        #[serde(default)]
+        concurrency: Concurrency,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        debounce_ms: Option<u32>,
+    },
+}
+
+impl BindingSpec {
+    /// Extract the slot binding expression regardless of form.
+    pub fn slot_expr(&self) -> &str {
+        match self {
+            BindingSpec::Short(s) => s.as_str(),
+            BindingSpec::Full { slot, .. } => slot.as_str(),
+        }
+    }
+
+    /// Concurrency mode — `Lww` when not specified.
+    pub fn concurrency(&self) -> Concurrency {
+        match self {
+            BindingSpec::Short(_) => Concurrency::default(),
+            BindingSpec::Full { concurrency, .. } => *concurrency,
+        }
+    }
+
+    /// Debounce in ms — `None` defers to the component's default.
+    pub fn debounce_ms(&self) -> Option<u32> {
+        match self {
+            BindingSpec::Short(_) => None,
+            BindingSpec::Full { debounce_ms, .. } => *debounce_ms,
+        }
+    }
+}
+
+/// Concurrency mode for two-way bound controls.
+///
+/// - `Lww` (last-write-wins, default): no `expected_generation` sent.
+///   Appropriate for continuous controls like sliders and most toggles.
+/// - `Occ` (optimistic concurrency): sends `expected_generation`;
+///   the server 409s on mismatch — shows a conflict banner + re-resolve.
+///   Appropriate when two simultaneous editors overwriting the same
+///   slot silently is unacceptable.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Concurrency {
+    /// Last-write-wins. No generation guard. Default.
+    #[default]
+    Lww,
+    /// Optimistic concurrency check. Server 409s on mismatch.
+    Occ,
+}
 
 // -------------------------------------------------------------------
 // Component
@@ -344,6 +416,60 @@ pub enum Component {
         disabled: Option<bool>,
         #[serde(skip_serializing_if = "Option::is_none")]
         action: Option<Action>,
+    },
+
+    /// Two-way bound boolean toggle (on/off switch). Reads its initial
+    /// value from the slot addressed by `bind`; writes back on click
+    /// via `POST /api/v1/slots`; reconciles via SSE echo. No
+    /// `HandlerRegistry` entry required.
+    ///
+    /// Renders disabled when no matching `WritePlan` entry exists for
+    /// the caller (ACL-denied write, binding error, etc.); the current
+    /// slot value remains visible.
+    ///
+    /// Default concurrency: `lww`. Default debounce: none (fires
+    /// immediately on click).
+    Toggle {
+        id: String,
+        /// Binding expression resolving to a boolean slot. Sugar form
+        /// or full `BindingSpec`.
+        bind: BindingSpec,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        label: Option<String>,
+        /// Resolved slot value baked in at resolve time. `null` when
+        /// the slot is unset.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        value: Option<bool>,
+    },
+
+    /// Two-way bound numeric slider. Reads its initial value from the
+    /// slot addressed by `bind`; debounces writes on drag and fires
+    /// once on pointer release. Same write + SSE-echo path as
+    /// [`Component::Toggle`].
+    ///
+    /// `min`, `max`, `step` are **rendering hints only** — they shape
+    /// the widget; the slot schema is the authoritative constraint.
+    ///
+    /// Default concurrency: `lww`. Default debounce: 150 ms trailing +
+    /// always fire on pointer release.
+    Slider {
+        id: String,
+        /// Binding expression resolving to a numeric slot.
+        bind: BindingSpec,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        label: Option<String>,
+        /// Resolved slot value baked in at resolve time.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        value: Option<f64>,
+        /// Rendering hint — minimum value. Default: 0.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        min: Option<f64>,
+        /// Rendering hint — maximum value. Default: 100.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        max: Option<f64>,
+        /// Rendering hint — step size. Default: 1.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        step: Option<f64>,
     },
 
     // ---- composite ------------------------------------------------
@@ -719,5 +845,88 @@ mod tests {
         assert_eq!(v["subscribe"][0], "node.123.slot.state");
         let back: Component = serde_json::from_value(v).unwrap();
         assert!(matches!(back, Component::Custom { .. }));
+    }
+
+    #[test]
+    fn toggle_short_form_round_trip() {
+        let c = Component::Toggle {
+            id: "t1".into(),
+            bind: BindingSpec::Short("$target.enabled".into()),
+            label: Some("Enabled".into()),
+            value: Some(true),
+        };
+        let v = serde_json::to_value(&c).unwrap();
+        assert_eq!(v["type"], "toggle");
+        assert_eq!(v["id"], "t1");
+        // Short form serialises as a bare string in the `bind` field.
+        assert_eq!(v["bind"], "$target.enabled");
+        assert_eq!(v["value"], true);
+
+        let back: Component = serde_json::from_value(v).unwrap();
+        match back {
+            Component::Toggle { id, bind, .. } => {
+                assert_eq!(id, "t1");
+                assert_eq!(bind.slot_expr(), "$target.enabled");
+                assert_eq!(bind.concurrency(), Concurrency::Lww);
+            }
+            other => panic!("expected Toggle, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn toggle_full_binding_form() {
+        let c = Component::Toggle {
+            id: "t2".into(),
+            bind: BindingSpec::Full {
+                slot: "$target.enabled".into(),
+                concurrency: Concurrency::Occ,
+                debounce_ms: None,
+            },
+            label: None,
+            value: Some(false),
+        };
+        let v = serde_json::to_value(&c).unwrap();
+        assert_eq!(v["bind"]["slot"], "$target.enabled");
+        assert_eq!(v["bind"]["concurrency"], "occ");
+        // debounce_ms absent when None
+        assert!(v["bind"].get("debounce_ms").is_none() || v["bind"]["debounce_ms"].is_null());
+
+        let back: Component = serde_json::from_value(v).unwrap();
+        let bind = match back {
+            Component::Toggle { bind, .. } => bind,
+            other => panic!("expected Toggle, got {other:?}"),
+        };
+        assert_eq!(bind.concurrency(), Concurrency::Occ);
+    }
+
+    #[test]
+    fn slider_round_trip() {
+        let c = Component::Slider {
+            id: "s1".into(),
+            bind: BindingSpec::Short("$target.brightness".into()),
+            label: Some("Brightness".into()),
+            value: Some(42.0),
+            min: Some(0.0),
+            max: Some(100.0),
+            step: Some(1.0),
+        };
+        let v = serde_json::to_value(&c).unwrap();
+        assert_eq!(v["type"], "slider");
+        assert_eq!(v["id"], "s1");
+        assert_eq!(v["bind"], "$target.brightness");
+        assert_eq!(v["min"], 0.0);
+        assert_eq!(v["max"], 100.0);
+        assert_eq!(v["value"], 42.0);
+
+        let back: Component = serde_json::from_value(v).unwrap();
+        assert!(matches!(back, Component::Slider { .. }));
+    }
+
+    #[test]
+    fn concurrency_default_is_lww() {
+        let c = Concurrency::default();
+        assert_eq!(c, Concurrency::Lww);
+        let v = serde_json::to_value(c).unwrap();
+        assert_eq!(v, "lww");
     }
 }

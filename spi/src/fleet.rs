@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn fleet_scope_subject_returns_none_for_local() {
-        assert!(FleetScope::Local.subject("api.v1.nodes.list").is_none());
+        assert!(FleetScope::Local.subject("api.v1.search").is_none());
     }
 
     #[test]
@@ -342,9 +342,9 @@ mod tests {
             tenant: crate::TenantId::new("sys"),
             agent_id: "edge-42".to_string(),
         }
-        .subject("api.v1.nodes.list")
+        .subject("api.v1.search")
         .unwrap();
-        assert_eq!(s.as_dotted(), "fleet.sys.edge-42.api.v1.nodes.list");
+        assert_eq!(s.as_dotted(), "fleet.sys.edge-42.api.v1.search");
     }
 
     /// Compile-time check: trait is object-safe so `Arc<dyn FleetTransport>`
