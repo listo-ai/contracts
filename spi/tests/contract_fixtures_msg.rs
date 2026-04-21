@@ -18,10 +18,10 @@ use serde_json::Value;
 use spi::Msg;
 
 fn fixtures_dir() -> PathBuf {
-    // `CARGO_MANIFEST_DIR` is `crates/spi`. The fixtures live in the
-    // workspace-level `/clients/contracts/fixtures/msg` directory — the
-    // cross-language source of truth, see `/clients/contracts/README.md`.
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../clients/contracts/fixtures/msg")
+    // `CARGO_MANIFEST_DIR` is `contracts/spi`.
+    // The fixtures live at `contracts/fixtures/msg` — shared with the TS test in
+    // `agent-client-ts/tests/contracts.test.ts`.
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures/msg")
 }
 
 fn collect_fixtures() -> Vec<PathBuf> {

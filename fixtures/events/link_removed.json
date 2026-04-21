@@ -1,0 +1,1 @@
+{"event":"link_removed","seq":7,"ts":1700000006000,"id":"link-001","source":{"node":"node-001","slot":"output"},"target":{"node":"node-002","slot":"input"}}

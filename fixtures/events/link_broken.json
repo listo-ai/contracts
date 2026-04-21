@@ -1,0 +1,1 @@
+{"event":"link_broken","seq":8,"ts":1700000007000,"id":"link-001","broken_end":{"node":"node-002","slot":"input"},"surviving_end":{"node":"node-001","slot":"output"}}
