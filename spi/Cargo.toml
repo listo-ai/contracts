@@ -1,5 +1,5 @@
 [package]
-name = "spi"
+name = "listo-spi"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

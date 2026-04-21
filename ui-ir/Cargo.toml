@@ -1,5 +1,5 @@
 [package]
-name = "ui-ir"
+name = "listo-ui-ir"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
