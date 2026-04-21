@@ -152,11 +152,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "listo-codegen"
+version = "0.1.0"
+dependencies = [
+ "listo-spi",
+ "schemars",
+ "serde_json",
+]
+
+[[package]]
 name = "listo-spi"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "futures-core",
+ "schemars",
  "semver",
  "serde",
  "serde_json",

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "spi",
     "ui-ir",
+    "codegen",
 ]
 
 [workspace.package]
