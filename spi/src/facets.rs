@@ -29,6 +29,12 @@ pub enum Facet {
     IsFlow,
     /// I/O surface (webhooks, HTTP clients, queues).
     IsIO,
+    /// Placement-agnostic utility node — the engine skips the parent's
+    /// `may_contain` whitelist for nodes carrying this facet. Use for
+    /// system/utility kinds (timers, heartbeats, annotations) that must
+    /// be placeable anywhere in the graph without requiring every
+    /// container manifest to explicitly opt them in.
+    IsAnywhere,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
