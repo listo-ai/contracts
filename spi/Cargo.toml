@@ -29,6 +29,10 @@ tokio = { workspace = true, features = ["macros", "rt"] }
 
 [package.metadata.spi]
 # Non-Rust artifacts ship alongside the crate:
-#   proto/extension.proto     — gRPC schema for extensions
 #   schemas/flow.schema.json  — flow document format (schema_version: 1)
 #   schemas/node.schema.json  — node manifest format
+#
+# The extension gRPC schema used to live here (`proto/extension.proto`)
+# but moved into `agent/crates/transport-grpc/proto/` — the only
+# build-time consumer — so it ships in the transport-grpc crate tarball
+# instead of requiring a sibling-repo checkout.
