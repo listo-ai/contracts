@@ -15,7 +15,9 @@
 //!
 //! Rust-side re-exports of generated types land here in later stages.
 
+pub mod artifacts;
 pub mod auth;
+pub mod backup;
 pub mod capabilities;
 mod containment;
 mod facets;
@@ -39,14 +41,15 @@ pub use fleet::{
     FleetError, FleetHandler, FleetMessage, FleetScope, FleetTransport, HealthStatus, HealthStream,
     NullTransport, Payload, Server, ServerHandle, SubscriptionStream,
 };
+pub use backup::{BundleKind, BundleManifest, Portability};
 pub use ids::{KindId, NodeId, NodePath};
 pub use manifest::{KindManifest, KindView, TriggerPolicy};
 pub use msg::{MessageId, Msg};
 pub use slot_schema::{SlotRole, SlotSchema, SlotValueKind};
 pub use subject::{Subject, SubjectBuilder, SubjectToken};
 pub use units::{
-    default_registry, normalize_for_storage, registry_dto, Quantity, QuantityDef, QuantityEntry,
-    RegistryDto, Unit, UnitRegistry,
+    default_registry, normalize_for_storage, registry_dto, AffineCoeffs, Quantity, QuantityDef,
+    QuantityEntry, RegistryDto, Unit, UnitEntry, UnitRegistry, UnknownQuantity, UnknownUnit,
 };
 
 /// Schema version for flow documents. Breaking changes bump this.

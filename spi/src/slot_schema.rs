@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
+use crate::backup::Portability;
 use crate::units::{Quantity, Unit};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -104,6 +105,16 @@ pub struct SlotSchema {
     /// conversion source unit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unit: Option<Unit>,
+
+    /// Backup/restore portability classification. Controls whether
+    /// this slot's value travels in templates, stays device-local, or
+    /// requires sealed encryption. See BACKUP.md § 2.
+    ///
+    /// Defaults to `Portable` — kind authors opt *out* of travelling,
+    /// not into it. The name-based credential lint (BACKUP.md § 2.3
+    /// rule 2) catches obvious misclassifications at `kinds register`.
+    #[serde(default)]
+    pub portability: Portability,
 }
 
 impl SlotValueKind {
@@ -146,6 +157,7 @@ impl SlotSchema {
             quantity: None,
             sensor_unit: None,
             unit: None,
+            portability: Portability::default(),
         }
     }
 
@@ -197,6 +209,12 @@ impl SlotSchema {
 
     pub fn triggers(mut self) -> Self {
         self.trigger = true;
+        self
+    }
+
+    /// Classify this slot's backup/restore portability.
+    pub fn with_portability(mut self, p: Portability) -> Self {
+        self.portability = p;
         self
     }
 }

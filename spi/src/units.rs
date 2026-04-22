@@ -65,6 +65,82 @@ pub enum Quantity {
     Duration,
 }
 
+impl Quantity {
+    /// Stable lower-snake identifier — matches `serde(rename_all =
+    /// "snake_case")`. Useful when constructing wire payloads by
+    /// hand, building preference-claim names, or keying a UI lookup
+    /// table against the same string the wire uses.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Temperature => "temperature",
+            Self::Pressure => "pressure",
+            Self::FlowRate => "flow_rate",
+            Self::Volume => "volume",
+            Self::Mass => "mass",
+            Self::Length => "length",
+            Self::Energy => "energy",
+            Self::Power => "power",
+            Self::Speed => "speed",
+            Self::Ratio => "ratio",
+            Self::Duration => "duration",
+        }
+    }
+
+    /// Human-friendly English name for UI labels. Locale-aware
+    /// rendering goes through the client's i18n layer (ICU4X /
+    /// `react-intl`) — this is the compact fallback for CLI output
+    /// and logs where no formatter is available.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Temperature => "Temperature",
+            Self::Pressure => "Pressure",
+            Self::FlowRate => "Flow rate",
+            Self::Volume => "Volume",
+            Self::Mass => "Mass",
+            Self::Length => "Length",
+            Self::Energy => "Energy",
+            Self::Power => "Power",
+            Self::Speed => "Speed",
+            Self::Ratio => "Ratio",
+            Self::Duration => "Duration",
+        }
+    }
+}
+
+impl std::str::FromStr for Quantity {
+    type Err = UnknownQuantity;
+
+    /// Parse from the snake-case wire form (inverse of [`Self::as_str`]).
+    ///
+    /// Matches the `#[serde(rename_all = "snake_case")]` form so
+    /// callers can accept CLI args / YAML values without routing
+    /// through `serde_json::from_str` just to parse one token.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "temperature" => Self::Temperature,
+            "pressure" => Self::Pressure,
+            "flow_rate" => Self::FlowRate,
+            "volume" => Self::Volume,
+            "mass" => Self::Mass,
+            "length" => Self::Length,
+            "energy" => Self::Energy,
+            "power" => Self::Power,
+            "speed" => Self::Speed,
+            "ratio" => Self::Ratio,
+            "duration" => Self::Duration,
+            other => return Err(UnknownQuantity(other.to_string())),
+        })
+    }
+}
+
+/// Returned by [`Quantity::from_str`] when the input doesn't match a
+/// known variant. Kept small + concrete so CLI / config code can map
+/// it to a readable error without carrying the full `serde` error
+/// machinery.
+#[derive(Debug, thiserror::Error)]
+#[error("unknown quantity `{0}`")]
+pub struct UnknownQuantity(pub String);
+
 // ── Unit ──────────────────────────────────────────────────────────────────────
 
 /// A concrete unit. Closed enum so the wire format is stable and the
@@ -134,6 +210,235 @@ pub enum Unit {
     Minute,
     Hour,
 }
+
+impl Unit {
+    /// Stable lower-snake identifier — matches `serde(rename_all =
+    /// "snake_case")`. Wire form is always this string.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Celsius => "celsius",
+            Self::Fahrenheit => "fahrenheit",
+            Self::Kelvin => "kelvin",
+            Self::Kilopascal => "kilopascal",
+            Self::Bar => "bar",
+            Self::Psi => "psi",
+            Self::Hectopascal => "hectopascal",
+            Self::LitersPerSecond => "liters_per_second",
+            Self::LitersPerMinute => "liters_per_minute",
+            Self::CubicMetersPerHour => "cubic_meters_per_hour",
+            Self::GallonsPerMinute => "gallons_per_minute",
+            Self::Liter => "liter",
+            Self::CubicMeter => "cubic_meter",
+            Self::UsGallon => "us_gallon",
+            Self::ImperialGallon => "imperial_gallon",
+            Self::Kilogram => "kilogram",
+            Self::Gram => "gram",
+            Self::Pound => "pound",
+            Self::Ounce => "ounce",
+            Self::Meter => "meter",
+            Self::Millimeter => "millimeter",
+            Self::Kilometer => "kilometer",
+            Self::Inch => "inch",
+            Self::Foot => "foot",
+            Self::Mile => "mile",
+            Self::Kilowatt => "kilowatt",
+            Self::Watt => "watt",
+            Self::Horsepower => "horsepower",
+            Self::KilowattHour => "kilowatt_hour",
+            Self::Joule => "joule",
+            Self::MetersPerSecond => "meters_per_second",
+            Self::KilometersPerHour => "kilometers_per_hour",
+            Self::MilesPerHour => "miles_per_hour",
+            Self::Knot => "knot",
+            Self::Ratio => "ratio",
+            Self::Percent => "percent",
+            Self::Millisecond => "millisecond",
+            Self::Second => "second",
+            Self::Minute => "minute",
+            Self::Hour => "hour",
+        }
+    }
+
+    /// Compact display symbol — the "°C" / "psi" / "L/s" form a
+    /// unit-picker uses when space is tight. Not locale-aware;
+    /// clients that want localised symbols go through ICU4X. This
+    /// is the pragmatic fallback for CLI, logs, and any surface
+    /// without an i18n framework.
+    pub fn symbol(self) -> &'static str {
+        match self {
+            Self::Celsius => "°C",
+            Self::Fahrenheit => "°F",
+            Self::Kelvin => "K",
+            Self::Kilopascal => "kPa",
+            Self::Bar => "bar",
+            Self::Psi => "psi",
+            Self::Hectopascal => "hPa",
+            Self::LitersPerSecond => "L/s",
+            Self::LitersPerMinute => "L/min",
+            Self::CubicMetersPerHour => "m³/h",
+            Self::GallonsPerMinute => "gpm",
+            Self::Liter => "L",
+            Self::CubicMeter => "m³",
+            Self::UsGallon => "gal",
+            Self::ImperialGallon => "imp gal",
+            Self::Kilogram => "kg",
+            Self::Gram => "g",
+            Self::Pound => "lb",
+            Self::Ounce => "oz",
+            Self::Meter => "m",
+            Self::Millimeter => "mm",
+            Self::Kilometer => "km",
+            Self::Inch => "in",
+            Self::Foot => "ft",
+            Self::Mile => "mi",
+            Self::Kilowatt => "kW",
+            Self::Watt => "W",
+            Self::Horsepower => "hp",
+            Self::KilowattHour => "kWh",
+            Self::Joule => "J",
+            Self::MetersPerSecond => "m/s",
+            Self::KilometersPerHour => "km/h",
+            Self::MilesPerHour => "mph",
+            Self::Knot => "kn",
+            Self::Ratio => "",
+            Self::Percent => "%",
+            Self::Millisecond => "ms",
+            Self::Second => "s",
+            Self::Minute => "min",
+            Self::Hour => "h",
+        }
+    }
+
+    /// Human-friendly English name for UI labels (compare with
+    /// [`Self::symbol`] for the compact form). Used by a unit-picker
+    /// that wants "Degrees Celsius" alongside "°C".
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Celsius => "Degrees Celsius",
+            Self::Fahrenheit => "Degrees Fahrenheit",
+            Self::Kelvin => "Kelvin",
+            Self::Kilopascal => "Kilopascals",
+            Self::Bar => "Bar",
+            Self::Psi => "Pounds per square inch",
+            Self::Hectopascal => "Hectopascals",
+            Self::LitersPerSecond => "Liters per second",
+            Self::LitersPerMinute => "Liters per minute",
+            Self::CubicMetersPerHour => "Cubic meters per hour",
+            Self::GallonsPerMinute => "Gallons per minute",
+            Self::Liter => "Liters",
+            Self::CubicMeter => "Cubic meters",
+            Self::UsGallon => "US gallons",
+            Self::ImperialGallon => "Imperial gallons",
+            Self::Kilogram => "Kilograms",
+            Self::Gram => "Grams",
+            Self::Pound => "Pounds",
+            Self::Ounce => "Ounces",
+            Self::Meter => "Meters",
+            Self::Millimeter => "Millimeters",
+            Self::Kilometer => "Kilometers",
+            Self::Inch => "Inches",
+            Self::Foot => "Feet",
+            Self::Mile => "Miles",
+            Self::Kilowatt => "Kilowatts",
+            Self::Watt => "Watts",
+            Self::Horsepower => "Horsepower",
+            Self::KilowattHour => "Kilowatt-hours",
+            Self::Joule => "Joules",
+            Self::MetersPerSecond => "Meters per second",
+            Self::KilometersPerHour => "Kilometers per hour",
+            Self::MilesPerHour => "Miles per hour",
+            Self::Knot => "Knots",
+            Self::Ratio => "Ratio",
+            Self::Percent => "Percent",
+            Self::Millisecond => "Milliseconds",
+            Self::Second => "Seconds",
+            Self::Minute => "Minutes",
+            Self::Hour => "Hours",
+        }
+    }
+}
+
+impl Unit {
+    /// Return the [`Quantity`] this unit belongs to, if any. Reverse
+    /// lookup over the registry's `allowed` sets. Useful for input
+    /// validation ("is `temperature_unit: psi` actually allowed?")
+    /// and for CLI / config code that has a unit string but wants to
+    /// confirm what quantity it applies to.
+    ///
+    /// `None` for units that don't appear in any quantity's allowed
+    /// set — which shouldn't happen for production variants, but
+    /// stays as `Option` so adding a future-experimental unit doesn't
+    /// force a panic.
+    pub fn quantity(self) -> Option<Quantity> {
+        let registry = default_registry();
+        for q in ALL_QUANTITIES {
+            if registry.allows(*q, self) {
+                return Some(*q);
+            }
+        }
+        None
+    }
+}
+
+impl std::str::FromStr for Unit {
+    type Err = UnknownUnit;
+
+    /// Parse from the snake-case wire form (inverse of [`Self::as_str`]).
+    /// Same pattern as [`Quantity::from_str`]: lets CLI / config code
+    /// accept a unit without round-tripping through serde.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "celsius" => Self::Celsius,
+            "fahrenheit" => Self::Fahrenheit,
+            "kelvin" => Self::Kelvin,
+            "kilopascal" => Self::Kilopascal,
+            "bar" => Self::Bar,
+            "psi" => Self::Psi,
+            "hectopascal" => Self::Hectopascal,
+            "liters_per_second" => Self::LitersPerSecond,
+            "liters_per_minute" => Self::LitersPerMinute,
+            "cubic_meters_per_hour" => Self::CubicMetersPerHour,
+            "gallons_per_minute" => Self::GallonsPerMinute,
+            "liter" => Self::Liter,
+            "cubic_meter" => Self::CubicMeter,
+            "us_gallon" => Self::UsGallon,
+            "imperial_gallon" => Self::ImperialGallon,
+            "kilogram" => Self::Kilogram,
+            "gram" => Self::Gram,
+            "pound" => Self::Pound,
+            "ounce" => Self::Ounce,
+            "meter" => Self::Meter,
+            "millimeter" => Self::Millimeter,
+            "kilometer" => Self::Kilometer,
+            "inch" => Self::Inch,
+            "foot" => Self::Foot,
+            "mile" => Self::Mile,
+            "kilowatt" => Self::Kilowatt,
+            "watt" => Self::Watt,
+            "horsepower" => Self::Horsepower,
+            "kilowatt_hour" => Self::KilowattHour,
+            "joule" => Self::Joule,
+            "meters_per_second" => Self::MetersPerSecond,
+            "kilometers_per_hour" => Self::KilometersPerHour,
+            "miles_per_hour" => Self::MilesPerHour,
+            "knot" => Self::Knot,
+            "ratio" => Self::Ratio,
+            "percent" => Self::Percent,
+            "millisecond" => Self::Millisecond,
+            "second" => Self::Second,
+            "minute" => Self::Minute,
+            "hour" => Self::Hour,
+            other => return Err(UnknownUnit(other.to_string())),
+        })
+    }
+}
+
+/// Returned by [`Unit::from_str`] when the input doesn't match a
+/// known variant. See [`UnknownQuantity`] for the paired quantity
+/// error.
+#[derive(Debug, thiserror::Error)]
+#[error("unknown unit `{0}`")]
+pub struct UnknownUnit(pub String);
 
 // ── QuantityDef ───────────────────────────────────────────────────────────────
 
@@ -542,30 +847,88 @@ fn convert_duration(v: f64, from: Unit, to: Unit) -> f64 {
 // ── Registry DTO (for `GET /api/v1/units`) ────────────────────────────────────
 
 /// One entry in the public [`RegistryDto`]. Mirrors [`QuantityDef`]
-/// but with enum values expressed as their serialised strings so the
-/// wire format is stable without depending on the rustc layout of the
-/// enum.
+/// with human-friendly fields added so unit-picker UIs don't have to
+/// hard-code labels.
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct QuantityEntry {
     /// Serialised quantity id (e.g. `"temperature"`).
     pub id: Quantity,
+    /// Human-friendly English name — "Temperature", "Flow rate".
+    /// Locale-aware rendering is a client concern; this is the
+    /// compact fallback.
+    pub label: String,
     /// Canonical (storage) unit for this quantity.
     pub canonical: Unit,
-    /// Every unit a user preference or slot schema can select for this
-    /// quantity. First entry is the canonical.
+    /// Every unit a user preference or slot schema can select for
+    /// this quantity. Always includes the canonical.
     pub allowed: Vec<Unit>,
-    /// Compact symbol for render without a locale-aware formatter.
+    /// Compact symbol for rendering the quantity itself (typically
+    /// the canonical unit's symbol, e.g. `"°C"` for temperature).
     pub symbol: String,
 }
 
-/// Full wire shape of `GET /api/v1/units`. Lets clients drive unit-
-/// picker UIs and (with the registry-version header) detect a drift
-/// between their cached factors and the server's. See
+/// One row in [`RegistryDto::units`]. Flat table so clients look up
+/// any unit's label/symbol/conversion by id in O(1) without hitting
+/// the quantity map first. Every unit appears exactly once.
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct UnitEntry {
+    pub id: Unit,
+    /// Compact symbol for space-constrained render — "°C", "psi",
+    /// "L/s". Locale-neutral.
+    pub symbol: String,
+    /// Human-friendly English name — "Degrees Celsius", "Pounds per
+    /// square inch". Localised rendering is a client concern.
+    pub label: String,
+    /// Affine conversion coefficients **to this unit's quantity
+    /// canonical**:
+    ///
+    /// ```text
+    /// canonical_value = scale * value + offset
+    /// ```
+    ///
+    /// Inverse: `value = (canonical_value - offset) / scale`.
+    ///
+    /// Affine covers both linear conversions (`bar → kPa` = `×100 +
+    /// 0`) and the one non-linear unit in the registry —
+    /// temperature: `°F → °C` = `×5/9 + −17.78…`. A future truly
+    /// non-affine unit (logarithmic, for example) would need a
+    /// richer representation and a major bump.
+    ///
+    /// Shipped on the wire so clients apply conversion with the
+    /// server's own factors — no hard-coded TS/Go tables drifting
+    /// from the `uom`-backed `StaticRegistry`. See
+    /// `USER-PREFERENCES.md § "Slot units"`.
+    ///
+    /// `None` for units that don't participate in conversion (none
+    /// today; the field is optional so dimensionless additions in
+    /// future versions don't force a major bump).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to_canonical: Option<AffineCoeffs>,
+}
+
+/// Coefficients of an affine conversion to the canonical unit of a
+/// quantity. See [`UnitEntry::to_canonical`].
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct AffineCoeffs {
+    pub scale: f64,
+    pub offset: f64,
+}
+
+/// Full wire shape of `GET /api/v1/units`. Lets clients drive
+/// unit-picker UIs without hard-coding any string. See
 /// `agent/docs/design/USER-PREFERENCES.md` § "API surface" /
 /// "Enum versioning and canonical-unit migration".
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct RegistryDto {
+    /// Quantities in enum-declaration order (stable across
+    /// platform releases; adding a variant is additive, renaming
+    /// requires a major bump).
     pub quantities: Vec<QuantityEntry>,
+    /// Flat table of every unit — symbol + label keyed by id.
+    /// Clients that render a unit-picker read from here; the
+    /// per-quantity `allowed` list tells them which subset is valid
+    /// for a given slot / preference field.
+    pub units: Vec<UnitEntry>,
 }
 
 /// Every quantity variant, in enum declaration order. Kept private so
@@ -588,20 +951,85 @@ const ALL_QUANTITIES: &[Quantity] = &[
 /// Build the public [`RegistryDto`] from any [`UnitRegistry`]. Pure —
 /// no global state — so tests can substitute a fixture registry and
 /// inspect the exact shape the transport layer will serialise.
+///
+/// The `units` table is populated by walking every quantity's
+/// `allowed` set, deduplicated by unit id. This keeps the flat table
+/// in sync with whatever the registry declares as reachable — a unit
+/// the registry can't use won't appear, so clients never see stale
+/// entries.
 pub fn registry_dto(registry: &dyn UnitRegistry) -> RegistryDto {
-    let quantities = ALL_QUANTITIES
+    let quantities: Vec<QuantityEntry> = ALL_QUANTITIES
         .iter()
         .map(|q| {
             let def = registry.quantity(*q);
             QuantityEntry {
                 id: *q,
+                label: q.label().to_string(),
                 canonical: def.canonical,
                 allowed: def.allowed.to_vec(),
                 symbol: def.symbol.to_string(),
             }
         })
         .collect();
-    RegistryDto { quantities }
+
+    // Flat unit table — deduplicate while preserving first-seen
+    // order so the output is deterministic across runs and platform
+    // versions. `Unit` doesn't implement `Ord` (closed enum with
+    // semantic rather than sortable identity), so dedupe via
+    // `Vec::contains` — O(n²) over a fixed-size set of ~40 units,
+    // which is cheaper than the alternatives.
+    //
+    // Each entry carries affine `to_canonical` coefficients derived
+    // **from the registry's own converter**. Two probe points
+    // (`value=0` and `value=1`) are enough to recover `scale` and
+    // `offset` for any affine transform — no duplicate factor
+    // tables, and a server-side change to `uom` mappings
+    // automatically changes what the wire ships.
+    let mut units: Vec<UnitEntry> = Vec::new();
+    for entry in &quantities {
+        let canonical = entry.canonical;
+        for u in &entry.allowed {
+            if !units.iter().any(|e| e.id == *u) {
+                let coeffs = derive_affine(registry, entry.id, *u, canonical);
+                units.push(UnitEntry {
+                    id: *u,
+                    symbol: u.symbol().to_string(),
+                    label: u.label().to_string(),
+                    to_canonical: coeffs,
+                });
+            }
+        }
+    }
+
+    RegistryDto { quantities, units }
+}
+
+/// Recover the affine `scale` + `offset` of a unit-to-canonical
+/// conversion by probing the registry at `value=0` and `value=1`.
+/// Works for every affine transform (linear + offset), which covers
+/// every unit in the current registry including temperature.
+///
+/// Returns `Some` for the canonical unit (trivially `{1.0, 0.0}`) and
+/// for every other allowed unit. Exotic units added later that are
+/// genuinely non-affine (logarithmic dB, tone scales) should return
+/// `None` and accept the client rendering them as canonical.
+fn derive_affine(
+    registry: &dyn UnitRegistry,
+    q: Quantity,
+    unit: Unit,
+    canonical: Unit,
+) -> Option<AffineCoeffs> {
+    let at_zero = registry.convert(q, 0.0, unit, canonical);
+    let at_one = registry.convert(q, 1.0, unit, canonical);
+    let scale = at_one - at_zero;
+    let offset = at_zero;
+    // Sanity: NaN / infinities indicate a non-affine unit the
+    // registry handles internally but can't be summarised as
+    // scale + offset.
+    if !scale.is_finite() || !offset.is_finite() {
+        return None;
+    }
+    Some(AffineCoeffs { scale, offset })
 }
 
 // ── Ingest normalisation ──────────────────────────────────────────────────────
@@ -838,6 +1266,7 @@ mod tests {
                 e.canonical,
                 e.id,
             );
+            assert!(!e.label.is_empty(), "quantity `{:?}` missing label", e.id);
         }
         // Stable iteration order — the list is a public contract
         // (versioned alongside the platform release per
@@ -852,6 +1281,236 @@ mod tests {
         let s = serde_json::to_string(&dto).unwrap();
         let back: RegistryDto = serde_json::from_str(&s).unwrap();
         assert_eq!(back.quantities.len(), dto.quantities.len());
+        assert_eq!(back.units.len(), dto.units.len());
+    }
+
+    #[test]
+    fn registry_dto_units_table_has_one_entry_per_unique_unit() {
+        let dto = registry_dto(default_registry());
+        // Gather the union of every quantity's allowed set via
+        // Vec::contains (Unit doesn't impl Ord; see registry_dto
+        // comment for why).
+        let mut expected: Vec<Unit> = Vec::new();
+        for q in &dto.quantities {
+            for u in &q.allowed {
+                if !expected.contains(u) {
+                    expected.push(*u);
+                }
+            }
+        }
+        assert_eq!(
+            dto.units.len(),
+            expected.len(),
+            "flat unit table should dedupe across quantities",
+        );
+        for entry in &dto.units {
+            assert!(
+                !entry.symbol.is_empty() || entry.id == Unit::Ratio,
+                "unit `{:?}` missing symbol",
+                entry.id,
+            );
+            assert!(!entry.label.is_empty(), "unit `{:?}` missing label", entry.id);
+        }
+    }
+
+    #[test]
+    fn quantity_as_str_and_from_str_round_trip() {
+        use std::str::FromStr;
+        for q in ALL_QUANTITIES {
+            let s = q.as_str();
+            let parsed = Quantity::from_str(s).expect("known wire form parses");
+            assert_eq!(*q, parsed, "quantity `{}` round-trips", s);
+        }
+    }
+
+    #[test]
+    fn quantity_from_str_rejects_unknown() {
+        use std::str::FromStr;
+        let err = Quantity::from_str("not_a_quantity").unwrap_err();
+        assert!(err.to_string().contains("not_a_quantity"));
+    }
+
+    #[test]
+    fn unit_as_str_and_from_str_round_trip() {
+        use std::str::FromStr;
+        for u in [
+            Unit::Celsius, Unit::Fahrenheit, Unit::Kelvin,
+            Unit::Kilopascal, Unit::Bar, Unit::Psi, Unit::Hectopascal,
+            Unit::LitersPerSecond, Unit::LitersPerMinute,
+            Unit::CubicMetersPerHour, Unit::GallonsPerMinute,
+            Unit::Liter, Unit::CubicMeter, Unit::UsGallon, Unit::ImperialGallon,
+            Unit::Kilogram, Unit::Gram, Unit::Pound, Unit::Ounce,
+            Unit::Meter, Unit::Millimeter, Unit::Kilometer,
+            Unit::Inch, Unit::Foot, Unit::Mile,
+            Unit::Kilowatt, Unit::Watt, Unit::Horsepower,
+            Unit::KilowattHour, Unit::Joule,
+            Unit::MetersPerSecond, Unit::KilometersPerHour,
+            Unit::MilesPerHour, Unit::Knot,
+            Unit::Ratio, Unit::Percent,
+            Unit::Millisecond, Unit::Second, Unit::Minute, Unit::Hour,
+        ] {
+            let s = u.as_str();
+            let parsed = Unit::from_str(s).expect("known unit wire form parses");
+            assert_eq!(u, parsed, "unit `{}` round-trips", s);
+        }
+    }
+
+    #[test]
+    fn unit_from_str_rejects_unknown() {
+        use std::str::FromStr;
+        let err = Unit::from_str("unobtainium").unwrap_err();
+        assert!(err.to_string().contains("unobtainium"));
+    }
+
+    #[test]
+    fn affine_coefficients_round_trip_against_registry_convert() {
+        // The registry exposes conversion via `convert(q, v, from,
+        // to)`. The flat unit table now ships `{scale, offset}`
+        // coefficients so clients convert without a round-trip.
+        // This test enforces the invariant: for every allowed unit,
+        // applying the published `to_canonical` coefficients to a
+        // probe set matches the registry's own conversion exactly
+        // (within float tolerance).
+        let r = default_registry();
+        let dto = registry_dto(r);
+        for q_entry in &dto.quantities {
+            let canonical = q_entry.canonical;
+            for unit_id in &q_entry.allowed {
+                let unit_entry = dto
+                    .units
+                    .iter()
+                    .find(|u| u.id == *unit_id)
+                    .expect("every allowed unit appears in flat table");
+                let coeffs = unit_entry
+                    .to_canonical
+                    .expect("allowed units ship coefficients");
+                // Probe several values — a single 0/1 pair would
+                // only prove the derivation method, not that it's
+                // actually affine for this unit.
+                for probe in [-100.0, -1.0, 0.0, 1.0, 42.0, 1_000_000.0] {
+                    let via_coeffs = coeffs.scale * probe + coeffs.offset;
+                    let via_registry = r.convert(q_entry.id, probe, *unit_id, canonical);
+                    // Relative tolerance: 1e-9 of the magnitude, or
+                    // 1e-9 absolute for near-zero values. Tight
+                    // enough to catch a factor being off, loose
+                    // enough to absorb f64 rounding.
+                    let scale = via_registry.abs().max(1.0);
+                    let err = (via_coeffs - via_registry).abs();
+                    assert!(
+                        err / scale < 1e-9,
+                        "coefficient drift for {:?}/{:?}: coeffs gave {}, registry gave {} (err {})",
+                        q_entry.id,
+                        *unit_id,
+                        via_coeffs,
+                        via_registry,
+                        err,
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn temperature_fahrenheit_coefficients_match_known_affine() {
+        // Sanity check: °F → °C is the one non-linear conversion
+        // in the registry. Verify the derived coefficients are the
+        // well-known 5/9 and −160/9 values (the latter = −32 × 5/9).
+        let dto = registry_dto(default_registry());
+        let f = dto.units.iter().find(|u| u.id == Unit::Fahrenheit).unwrap();
+        let c = f.to_canonical.unwrap();
+        assert!((c.scale - 5.0 / 9.0).abs() < 1e-12, "scale={}", c.scale);
+        assert!((c.offset - (-160.0 / 9.0)).abs() < 1e-12, "offset={}", c.offset);
+    }
+
+    #[test]
+    fn every_unit_maps_back_to_its_quantity() {
+        // Closed-enum invariant: every `Unit` variant is in the
+        // `allowed` set of at least one `Quantity`. If a variant
+        // ever gets added without being wired into a quantity,
+        // `Unit::quantity()` returns None for it and this test
+        // fails — cheap integrity guard on future edits.
+        for u in [
+            Unit::Celsius, Unit::Fahrenheit, Unit::Kelvin,
+            Unit::Kilopascal, Unit::Bar, Unit::Psi, Unit::Hectopascal,
+            Unit::LitersPerSecond, Unit::LitersPerMinute,
+            Unit::CubicMetersPerHour, Unit::GallonsPerMinute,
+            Unit::Liter, Unit::CubicMeter, Unit::UsGallon, Unit::ImperialGallon,
+            Unit::Kilogram, Unit::Gram, Unit::Pound, Unit::Ounce,
+            Unit::Meter, Unit::Millimeter, Unit::Kilometer,
+            Unit::Inch, Unit::Foot, Unit::Mile,
+            Unit::Kilowatt, Unit::Watt, Unit::Horsepower,
+            Unit::KilowattHour, Unit::Joule,
+            Unit::MetersPerSecond, Unit::KilometersPerHour,
+            Unit::MilesPerHour, Unit::Knot,
+            Unit::Ratio, Unit::Percent,
+            Unit::Millisecond, Unit::Second, Unit::Minute, Unit::Hour,
+        ] {
+            assert!(
+                u.quantity().is_some(),
+                "unit `{u:?}` is not in any quantity's allowed set",
+            );
+        }
+    }
+
+    #[test]
+    fn unit_quantity_lookup_returns_expected_quantities() {
+        assert_eq!(Unit::Celsius.quantity(), Some(Quantity::Temperature));
+        assert_eq!(Unit::Psi.quantity(), Some(Quantity::Pressure));
+        assert_eq!(Unit::KilowattHour.quantity(), Some(Quantity::Energy));
+        assert_eq!(Unit::Knot.quantity(), Some(Quantity::Speed));
+    }
+
+    #[test]
+    fn canonical_units_have_identity_coefficients() {
+        let dto = registry_dto(default_registry());
+        for q in &dto.quantities {
+            let entry = dto.units.iter().find(|u| u.id == q.canonical).unwrap();
+            let c = entry.to_canonical.unwrap();
+            assert!((c.scale - 1.0).abs() < 1e-12, "{:?} scale={}", q.id, c.scale);
+            assert!(c.offset.abs() < 1e-12, "{:?} offset={}", q.id, c.offset);
+        }
+    }
+
+    #[test]
+    fn enum_serde_matches_from_str_exactly() {
+        use std::str::FromStr;
+        // If serde's `rename_all = "snake_case"` ever diverges from
+        // our hand-written as_str/from_str, this test catches it on
+        // the next build — keeping the two source-of-truth strings
+        // aligned.
+        for q in ALL_QUANTITIES {
+            let via_serde = serde_json::to_string(q).unwrap();
+            // to_string wraps in quotes — `"temperature"` — strip them.
+            let stripped = via_serde.trim_matches('"');
+            assert_eq!(stripped, q.as_str(), "serde form for {q:?} diverged");
+            assert_eq!(*q, Quantity::from_str(stripped).unwrap());
+        }
+    }
+
+    #[test]
+    fn unit_symbol_and_label_are_defined_for_every_variant() {
+        // Compile-time: the match in `Unit::symbol`/`label` is
+        // exhaustive. Runtime: ensure no variant resolves to an
+        // empty label (symbol can be empty for Ratio by design).
+        for u in [
+            Unit::Celsius, Unit::Fahrenheit, Unit::Kelvin,
+            Unit::Kilopascal, Unit::Bar, Unit::Psi, Unit::Hectopascal,
+            Unit::LitersPerSecond, Unit::LitersPerMinute,
+            Unit::CubicMetersPerHour, Unit::GallonsPerMinute,
+            Unit::Liter, Unit::CubicMeter, Unit::UsGallon, Unit::ImperialGallon,
+            Unit::Kilogram, Unit::Gram, Unit::Pound, Unit::Ounce,
+            Unit::Meter, Unit::Millimeter, Unit::Kilometer,
+            Unit::Inch, Unit::Foot, Unit::Mile,
+            Unit::Kilowatt, Unit::Watt, Unit::Horsepower,
+            Unit::KilowattHour, Unit::Joule,
+            Unit::MetersPerSecond, Unit::KilometersPerHour,
+            Unit::MilesPerHour, Unit::Knot,
+            Unit::Ratio, Unit::Percent,
+            Unit::Millisecond, Unit::Second, Unit::Minute, Unit::Hour,
+        ] {
+            assert!(!u.label().is_empty(), "unit `{u:?}` has empty label");
+            assert!(!u.as_str().is_empty(), "unit `{u:?}` has empty id");
+        }
     }
 
     #[test]

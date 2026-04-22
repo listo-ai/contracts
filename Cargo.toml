@@ -38,3 +38,6 @@ uuid = { version = "1", features = ["v4", "serde"] }
 # detail inside the registry; the `Quantity`/`Unit` enums on the wire
 # do not expose any `uom` types.
 uom = { version = "0.36", default-features = false, features = ["autoconvert", "f64", "si", "std"] }
+# Zero-copy byte buffers. Referenced by `spi::artifacts` for streaming
+# artifact download bodies without copying through `Vec<u8>`.
+bytes = "1"
