@@ -27,6 +27,7 @@ mod msg;
 pub mod presentation;
 mod slot_schema;
 pub mod subject;
+pub mod units;
 
 pub use auth::{
     Actor, AuthContext, AuthError, AuthProvider, NoHeaders, RequestHeaders, Scope, ScopeSet,
@@ -43,6 +44,10 @@ pub use manifest::{KindManifest, KindView, TriggerPolicy};
 pub use msg::{MessageId, Msg};
 pub use slot_schema::{SlotRole, SlotSchema, SlotValueKind};
 pub use subject::{Subject, SubjectBuilder, SubjectToken};
+pub use units::{
+    default_registry, normalize_for_storage, registry_dto, Quantity, QuantityDef, QuantityEntry,
+    RegistryDto, Unit, UnitRegistry,
+};
 
 /// Schema version for flow documents. Breaking changes bump this.
 pub const FLOW_SCHEMA_VERSION: u32 = 1;

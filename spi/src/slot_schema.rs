@@ -8,6 +8,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
+use crate::units::{Quantity, Unit};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SlotRole {
@@ -79,6 +81,29 @@ pub struct SlotSchema {
     /// off this flag. Ignored on non-output roles.
     #[serde(default)]
     pub emit_on_init: bool,
+
+    /// Physical quantity this slot measures (e.g. temperature,
+    /// pressure). `None` = dimensionless. Only meaningful for
+    /// `value_kind: Number` (and occasionally thresholded `Bool`);
+    /// ignored on other kinds. See
+    /// `agent/docs/design/USER-PREFERENCES.md` § "Slot units".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quantity: Option<Quantity>,
+
+    /// Unit the sensor natively emits. The ingest pipeline converts
+    /// from this unit to the quantity's canonical unit before
+    /// storage. `None` = the sensor already emits the canonical unit;
+    /// no ingest-time conversion is applied. Must be in
+    /// `UnitRegistry::quantity(q).allowed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sensor_unit: Option<Unit>,
+
+    /// Unit the **stored** value is expressed in. `None` =
+    /// canonical. Set only when ingest-time conversion is explicitly
+    /// opted out (rare — see the design doc). Drives the read-path
+    /// conversion source unit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unit: Option<Unit>,
 }
 
 impl SlotValueKind {
@@ -118,7 +143,31 @@ impl SlotSchema {
             trigger: false,
             is_internal: false,
             emit_on_init: false,
+            quantity: None,
+            sensor_unit: None,
+            unit: None,
         }
+    }
+
+    /// Declare this slot measures a physical quantity. Typical use:
+    /// `SlotSchema::new("temp", SlotRole::Input).with_kind(SlotValueKind::Number).with_quantity(Quantity::Temperature)`.
+    pub fn with_quantity(mut self, q: Quantity) -> Self {
+        self.quantity = Some(q);
+        self
+    }
+
+    /// Declare the sensor's native unit. The ingest pipeline will
+    /// convert to the quantity's canonical unit before storage.
+    pub fn with_sensor_unit(mut self, u: Unit) -> Self {
+        self.sensor_unit = Some(u);
+        self
+    }
+
+    /// Override the stored unit (rare — only for ingest-time
+    /// opt-out). Defaults to the quantity's canonical unit.
+    pub fn with_unit(mut self, u: Unit) -> Self {
+        self.unit = Some(u);
+        self
     }
 
     pub fn internal(mut self) -> Self {

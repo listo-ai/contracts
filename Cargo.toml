@@ -32,3 +32,9 @@ semver = { version = "1", features = ["serde"] }
 thiserror = "1"
 tokio = { version = "1", features = ["macros", "rt"] }
 uuid = { version = "1", features = ["v4", "serde"] }
+# Type-safe unit conversion — backs the `StaticRegistry` in
+# `spi::units`. See `agent/docs/design/USER-PREFERENCES.md` § "Library
+# choices". Compile-time dimensional analysis is an implementation
+# detail inside the registry; the `Quantity`/`Unit` enums on the wire
+# do not expose any `uom` types.
+uom = { version = "0.36", default-features = false, features = ["autoconvert", "f64", "si", "std"] }

@@ -21,6 +21,7 @@ schemars = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
 semver = { workspace = true }
+uom = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
